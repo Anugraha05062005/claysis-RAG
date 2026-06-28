@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Modal RAG Chatbot - Enterprise AI Dashboard</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Link to local Vanilla CSS -->
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-brain logo-icon"></i>
+                <div class="logo-text">
+                    <h1>MoniRAG</h1>
+                    <span>Multi-Modal RAG Engine</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="status-indicator">
+                    <span class="indicator-dot active" id="ollama-status-dot"></span>
+                    <span id="ollama-status-text">Ollama Active</span>
+                </div>
+                <button id="toggle-settings-btn" class="icon-btn" title="System Settings">
+                    <i class="fa-solid fa-sliders"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main">
+            <!-- SIDEBAR: INGESTION -->
+            <section class="sidebar-panel">
+                <!-- CRAWLER CARD -->
+                <div class="dashboard-card" id="crawler-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-globe header-icon"></i>
+                        <h2>Recursive Web Ingestion</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="crawl-form">
+                            <div class="input-group">
+                                <label for="seed-url">Seed URL</label>
+                                <input type="url" id="seed-url" placeholder="https://example.com" required>
+                            </div>
+                            <div class="input-group">
+                                <div class="slider-header">
+                                    <label for="crawl-depth">Crawl Depth</label>
+                                    <span id="depth-val">2</span>
+                                </div>
+                                <input type="range" id="crawl-depth" min="0" max="4" value="2">
+                            </div>
+                            <button type="submit" id="crawl-submit-btn" class="primary-btn">
+                                <i class="fa-solid fa-spider"></i> Start Web Crawling
+                            </button>
+                        </form>
+                        <div id="crawl-status" class="status-msg hidden"></div>
+                    </div>
+                </div>
+
+                <!-- FILE UPLOADER CARD -->
+                <div class="dashboard-card" id="uploader-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-file-arrow-up header-icon"></i>
+                        <h2>Unified File Ingest (14 Formats)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="drop-zone" class="upload-drop-zone">
+                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                            <p>Drag & Drop files here or click to select</p>
+                            <span>Supports PDF, Word, PPTX, CSV, EML, SQLite, Audio, Video, Images...</span>
+                            <input type="file" id="file-input" class="hidden" multiple>
+                        </div>
+                        <div id="upload-progress-list" class="progress-list"></div>
+                    </div>
+                </div>
+
+                <!-- SOURCES REGISTER CARD -->
+                <div class="dashboard-card flex-grow" id="sources-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-database header-icon"></i>
+                        <h2>Knowledge Base Sources</h2>
+                        <button id="clear-db-btn" class="danger-btn-small" title="Reset Knowledge Base">
+                            <i class="fa-solid fa-trash-can"></i> Reset
+                        </button>
+                    </div>
+                    <div class="card-body flex-column scrollable">
+                        <div id="sources-list" class="sources-list-container">
+                            <div class="empty-sources-msg">No sources ingested yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CHAT INTERFACE -->
+            <section class="chat-panel">
+                <div class="chat-container">
+                    <!-- MESSAGE HISTORY -->
+                    <div class="chat-messages" id="chat-messages-container">
+                        <div class="bot-message message-block">
+                            <div class="message-avatar">
+                                <i class="fa-solid fa-robot"></i>
+                            </div>
+                            <div class="message-content-wrapper">
+                                <div class="message-text">
+                                    Hello! I am your RAG-powered Multi-Modal Intelligence Assistant.
+                                    <br><br>
+                                    To get started:
+                                    <ul>
+                                        <li>Crawl a web domain using the **Web Ingestion** panel.</li>
+                                        <li>Upload document formats, spreadsheets, media clips, or database logs in the **File Ingest** panel.</li>
+                                        <li>Ask me questions about the information contained inside!</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QUERY INPUT BOX -->
+                    <div class="chat-input-area">
+                        <form id="chat-form" class="chat-input-form">
+                            <div class="input-filters-bar">
+                                <div class="filter-item">
+                                    <label for="search-mode"><i class="fa-solid fa-magnifying-glass"></i> Mode</label>
+                                    <select id="search-mode">
+                                        <option value="hybrid">Hybrid (Vector + BM25)</option>
+                                        <option value="vector">Vector (Semantic)</option>
+                                        <option value="keyword">BM25 (Keyword)</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item flex-grow">
+                                    <label for="source-filter"><i class="fa-solid fa-filter"></i> Filter Source</label>
+                                    <select id="source-filter">
+                                        <option value="">All Ingested Sources</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-input-row">
+                                <textarea id="query-input" placeholder="Ask a question about the knowledge base..." required></textarea>
+                                <button type="submit" id="query-submit-btn" class="send-btn" title="Send Question">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- SYSTEM SETTINGS MODAL / SIDEBAR OVERLAY -->
+        <div id="settings-overlay" class="settings-overlay hidden">
+            <div class="settings-modal">
+                <div class="modal-header">
+                    <h2><i class="fa-solid fa-gears"></i> System Configuration</h2>
+                    <button id="close-settings-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="settings-form">
+                        <div class="input-group">
+                            <label for="settings-groq-key">
+                                Groq API Key
+                                <span class="help-tooltip" title="Required for Fallback Cloud Generation, Video Timeline extraction, and Cloud Whisper Transcription."><i class="fa-solid fa-circle-info"></i></span>
+                            </label>
+                            <input type="password" id="settings-groq-key" placeholder="gsk_...">
+                        </div>
+                        <div class="input-group">
+                            <label for="settings-ollama-model">Ollama LLM Model</label>
+                            <input type="text" id="settings-ollama-model" value="mistral:latest" placeholder="mistral:latest">
+                        </div>
+                        <div class="input-group">
+                            <label for="settings-groq-model">Groq Fallback Model</label>
+                            <input type="text" id="settings-groq-model" value="llama-3.3-70b-versatile" placeholder="llama-3.3-70b-versatile">
+                        </div>
+                        <button type="submit" class="success-btn">
+                            <i class="fa-solid fa-check-double"></i> Save Configurations
+                        </button>
+                    </form>
+                    <div class="system-diagnostics">
+                        <h3>Ollama Environment</h3>
+                        <ul>
+                            <li>Primary Model: <code id="diag-ollama-model">mistral:latest</code></li>
+                            <li>Embedder Model: <code>nomic-embed-text:latest</code> (Required)</li>
+                            <li>Local URL: <code>http://localhost:11434</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend logic script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
